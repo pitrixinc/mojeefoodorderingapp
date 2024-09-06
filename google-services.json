@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "966949427175",
+    "project_id": "mojeefoodorderingmobileapp",
+    "storage_bucket": "mojeefoodorderingmobileapp.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:966949427175:android:4e667e9ada49bbd9c74f42",
+        "android_client_info": {
+          "package_name": "com.mojeefoodordering.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCO_U7bmXoHhhanbgxbHRqsav82SQ2YT0I"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
