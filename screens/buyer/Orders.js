@@ -1,14 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, FlatList, TouchableOpacity, Image, StyleSheet } from 'react-native';
+import { View, Text, TextInput, FlatList, TouchableOpacity, Image, StyleSheet, Modal, ScrollView, Dimensions } from 'react-native';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { auth, db } from '../../firebase/firebaseConfig';
 import { collection, query, where, getDocs } from 'firebase/firestore';
+import MapView, { Marker, Polyline } from 'react-native-maps';
 
 const OrderScreen = () => {
   const [orders, setOrders] = useState([]);
   const [filteredOrders, setFilteredOrders] = useState([]);
   const [searchText, setSearchText] = useState('');
   const [activeTab, setActiveTab] = useState('all');
+  const [trackingModalVisible, setTrackingModalVisible] = useState(false);
+const [currentOrder, setCurrentOrder] = useState(null);
+
   
   const bannerImages = [
     require('../../assets/images/banner1.jpg'),
@@ -52,7 +56,12 @@ const OrderScreen = () => {
   );
 
   const renderOrderItem = ({ item }) => (
-    <TouchableOpacity style={styles.orderCard}>
+    <TouchableOpacity 
+       style={styles.orderCard}
+       onPress={() => {
+        setCurrentOrder(item);  // Set the selected order
+        setTrackingModalVisible(true);  // Show the modal
+      }}>
       <Image source={{ uri: item.image }} style={styles.orderImage} />
       <View style={styles.orderDetails}>
         <Text style={styles.orderName}>{item.name}</Text>
@@ -61,6 +70,245 @@ const OrderScreen = () => {
       </View>
     </TouchableOpacity>
   );
+
+  const TrackingModal = () => {
+    const vendorLocation = currentOrder?.vendorLocation;
+    const buyerLocation = currentOrder?.buyerLocation;
+  
+    console.log("Vendor Location: ", vendorLocation);
+console.log("Buyer Location: ", buyerLocation);
+    // Fallback coordinates for the map in case locations are unavailable
+    const defaultLocation = { latitude: 37.7749, longitude: -122.4194 }; // Example: San Francisco
+
+  
+    const initialRegion = {
+      latitude: vendorLocation?.latitude || buyerLocation?.latitude || defaultLocation.latitude,
+      longitude: vendorLocation?.longitude || buyerLocation?.longitude || defaultLocation.longitude,
+      latitudeDelta: 0.05,
+      longitudeDelta: 0.05,
+    };
+    
+    // Log the coordinates if available
+  if (vendorLocation) {
+    console.log("Vendor Location Coordinates: ", {
+      latitude: vendorLocation.latitude,
+      longitude: vendorLocation.longitude,
+    });
+  } else {
+    console.log("Vendor Location not available");
+  }
+
+  if (buyerLocation) {
+    console.log("Buyer Location Coordinates: ", {
+      latitude: buyerLocation.latitude,
+      longitude: buyerLocation.longitude,
+    });
+  } else {
+    console.log("Buyer Location not available");
+  }
+
+  
+    // Ensure both vendorLocation and buyerLocation are available before rendering the map
+    const areLocationsAvailable = vendorLocation && buyerLocation;
+  
+    return (
+      <Modal visible={trackingModalVisible} transparent={true} animationType="slide">
+        <View style={styles.buyerOrderOverlay}>
+          <View style={styles.buyerOrderBottomModalContainer}>
+            <View style={styles.buyerOrderDragIndicator} />
+  
+            <ScrollView style={styles.buyerOrderScrollView}>
+           
+              {areLocationsAvailable ? (
+                <View style={styles.mapContainer}>
+                  <MapView
+                    style={styles.map}
+                    initialRegion={initialRegion}
+                  >
+                    
+                    {vendorLocation && (
+                      <Marker
+                        coordinate={{
+                          latitude: vendorLocation.latitude,
+                          longitude: vendorLocation.longitude,
+                        }}
+                        title="Vendor Location"
+                      />
+                    )}
+  
+                    
+                    {buyerLocation && (
+                      <Marker
+                        coordinate={{
+                          latitude: buyerLocation.latitude,
+                          longitude: buyerLocation.longitude,
+                        }}
+                        title="Buyer Location"
+                      />
+                    )}
+  
+                    
+                    <Polyline
+                      coordinates={[
+                        { latitude: vendorLocation.latitude, longitude: vendorLocation.longitude },
+                        { latitude: buyerLocation.latitude, longitude: buyerLocation.longitude },
+                      ]}
+                      strokeColor="green"
+                      strokeWidth={5}
+                    />
+                  </MapView>
+                </View>
+              ) : (
+                <Text style={styles.errorText}>Location data is not available.</Text>
+              )}
+            
+              <Text style={styles.buyerOrderThankYouText}>Order Details</Text>
+  
+              {currentOrder && (
+                <>
+                  <Text style={styles.buyerOrderSummaryTitle}>Order Summary:</Text>
+                  <View style={styles.buyerOrderItem}>
+                    <Image source={{ uri: currentOrder.image }} style={styles.buyerOrderItemImage} />
+                    <View style={styles.buyerOrderItemDetails}>
+                      <Text style={styles.buyerOrderItemName}>{currentOrder.name}</Text>
+                      <Text style={styles.buyerOrderItemPrice}>GHS{currentOrder.price}</Text>
+                    </View>
+                  </View>
+                  <Text style={styles.buyerOrderId}>Order ID: {currentOrder.id}</Text>
+                </>
+              )}
+  
+              {/* Tracking Status */}
+              {/* Order Status */}
+              <View style={styles.buyerOrderStatusContainer}>
+                <Text style={styles.buyerOrderStatusTitle}>Order Status:</Text>
+  
+                {currentOrder ? (
+                  <View style={styles.buyerOrderVerticalStatusContainer}>
+                    {/* Pending Step */}
+                    <View style={styles.buyerOrderStatusStep}>
+                      <View
+                        style={[
+                          styles.buyerOrderProgressLine,
+                          {
+                            backgroundColor:
+                              currentOrder.status === 'pending' ||
+                              currentOrder.status === 'in progress' ||
+                              currentOrder.status === 'delivered'
+                                ? 'green'
+                                : 'gray',
+                          },
+                        ]}
+                      />
+                      <Ionicons
+                        name="hourglass-outline"
+                        size={24}
+                        color={
+                          currentOrder.status === 'pending' ||
+                          currentOrder.status === 'in progress' ||
+                          currentOrder.status === 'delivered'
+                            ? 'green'
+                            : 'gray'
+                        }
+                      />
+                      <View style={styles.buyerOrderStatusTextContainer}>
+                        <Text
+                          style={[
+                            styles.buyerOrderStatusText,
+                            {
+                              color:
+                                currentOrder.status === 'pending' ||
+                                currentOrder.status === 'in progress' ||
+                                currentOrder.status === 'delivered'
+                                  ? 'green'
+                                  : 'gray',
+                            },
+                          ]}
+                        >
+                          Pending
+                        </Text>
+                      </View>
+                    </View>
+  
+                    {/* In Progress Step */}
+                    <View style={styles.buyerOrderStatusStep}>
+                      <View
+                        style={[
+                          styles.buyerOrderProgressLine,
+                          {
+                            backgroundColor:
+                              currentOrder.status === 'in progress' || currentOrder.status === 'delivered'
+                                ? 'green'
+                                : 'gray',
+                          },
+                        ]}
+                      />
+                      <Ionicons
+                        name="construct-outline"
+                        size={24}
+                        color={
+                          currentOrder.status === 'in progress' || currentOrder.status === 'delivered'
+                            ? 'green'
+                            : 'gray'
+                        }
+                      />
+                      <View style={styles.buyerOrderStatusTextContainer}>
+                        <Text
+                          style={[
+                            styles.buyerOrderStatusText,
+                            {
+                              color:
+                                currentOrder.status === 'in progress' || currentOrder.status === 'delivered'
+                                  ? 'green'
+                                  : 'gray',
+                            },
+                          ]}
+                        >
+                          In Progress
+                        </Text>
+                      </View>
+                    </View>
+  
+                    {/* Delivered Step */}
+                    <View style={styles.buyerOrderStatusStep}>
+                      <View
+                        style={[
+                          styles.buyerOrderProgressLine,
+                          { backgroundColor: currentOrder.status === 'delivered' ? 'green' : 'gray' },
+                        ]}
+                      />
+                      <Ionicons
+                        name="checkmark-done-outline"
+                        size={24}
+                        color={currentOrder.status === 'delivered' ? 'green' : 'gray'}
+                      />
+                      <View style={styles.buyerOrderStatusTextContainer}>
+                        <Text
+                          style={[
+                            styles.buyerOrderStatusText,
+                            { color: currentOrder.status === 'delivered' ? 'green' : 'gray' },
+                          ]}
+                        >
+                          Delivered
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                ) : (
+                  <Text style={styles.errorText}>No order data available</Text>
+                )}
+              </View>
+  
+              <TouchableOpacity onPress={() => setTrackingModalVisible(false)} style={styles.buyerOrderCloseButton}>
+                <Text style={styles.buyerOrderCloseButtonText}>Close</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+    );
+  };
+  
 
   return (
     <View style={styles.container}>
@@ -113,6 +361,9 @@ const OrderScreen = () => {
         keyExtractor={(item) => item.id}
         style={styles.orderList}
       />
+
+       {/* Tracking Modal */}
+    <TrackingModal />
     </View>
   );
 };
@@ -229,5 +480,135 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#007bff',
     marginTop: 5,
+  },
+
+
+
+
+
+  buyerOrderOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  buyerOrderBottomModalContainer: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    maxHeight: '85%', // Ensures content is scrollable if needed
+    width: '100%',
+    alignSelf: 'center',
+  },
+  buyerOrderDragIndicator: {
+    width: 50,
+    height: 5,
+    backgroundColor: '#ccc',
+    borderRadius: 10,
+    alignSelf: 'center',
+    marginBottom: 15,
+  },
+  buyerOrderScrollView: {
+    paddingBottom: 20,
+  },
+  buyerOrderThankYouText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 20,
+    color: '#333',
+  },
+  buyerOrderSummaryTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 10,
+    color: '#444',
+  },
+  buyerOrderItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 10,
+  },
+  buyerOrderItemImage: {
+    width: 50,
+    height: 50,
+    borderRadius: 10,
+    marginRight: 15,
+  },
+  buyerOrderItemDetails: {
+    flex: 1,
+  },
+  buyerOrderItemName: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#555',
+  },
+  buyerOrderItemPrice: {
+    fontSize: 14,
+    color: '#999',
+  },
+  buyerOrderId: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#888',
+    marginVertical: 10,
+    textAlign: 'center',
+  },
+  buyerOrderStatusContainer: {
+    marginTop: 20,
+  },
+  buyerOrderStatusTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#444',
+  },
+  buyerOrderVerticalStatusContainer: {
+    marginTop: 10,
+    alignItems: 'flex-start',
+  },
+  buyerOrderStatusStep: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  buyerOrderStatusTextContainer: {
+    marginLeft: 10,
+  },
+  buyerOrderStatusText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  buyerOrderStatusDate: {
+    fontSize: 12,
+  },
+  buyerOrderProgressLine: {
+    width: 3,
+    height: 50,
+    marginLeft: 11,
+    marginRight: 5,
+  },
+  buyerOrderCloseButton: {
+    backgroundColor: '#ff6347',
+    borderRadius: 10,
+    paddingVertical: 15,
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  buyerOrderCloseButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+
+
+
+
+  mapContainer: {
+    width: Dimensions.get('window').width,
+    height: 300,
+    marginBottom: 20,
+  },
+  map: {
+    ...StyleSheet.absoluteFillObject,
   },
 });
