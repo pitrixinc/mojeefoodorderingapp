@@ -72,7 +72,7 @@ const [currentOrder, setCurrentOrder] = useState(null);
   );
 
   const TrackingModal = () => {
-    const vendorLocation = currentOrder?.vendorLocation;
+   /* const vendorLocation = currentOrder?.vendorLocation;
     const buyerLocation = currentOrder?.buyerLocation;
   
     console.log("Vendor Location: ", vendorLocation);
@@ -110,7 +110,7 @@ console.log("Buyer Location: ", buyerLocation);
   
     // Ensure both vendorLocation and buyerLocation are available before rendering the map
     const areLocationsAvailable = vendorLocation && buyerLocation;
-  
+  */
     return (
       <Modal visible={trackingModalVisible} transparent={true} animationType="slide">
         <View style={styles.buyerOrderOverlay}>
@@ -118,7 +118,7 @@ console.log("Buyer Location: ", buyerLocation);
             <View style={styles.buyerOrderDragIndicator} />
   
             <ScrollView style={styles.buyerOrderScrollView}>
-           
+           {/*
               {areLocationsAvailable ? (
                 <View style={styles.mapContainer}>
                   <MapView
@@ -161,7 +161,7 @@ console.log("Buyer Location: ", buyerLocation);
               ) : (
                 <Text style={styles.errorText}>Location data is not available.</Text>
               )}
-            
+              */}
               <Text style={styles.buyerOrderThankYouText}>Order Details</Text>
   
               {currentOrder && (

@@ -71,7 +71,7 @@ const [currentOrder, setCurrentOrder] = useState(null);  // Store the order deta
   useEffect(() => {
     // Fetch approved food items from Firebase
     const fetchFoodItems = async () => {
-      const q = query(collection(db, 'foods'), where('status', '==', 'approved'));
+      const q = query(collection(db, 'foods')/*, where('status', '==', 'approved')*/);
       const querySnapshot = await getDocs(q);
       const foodList = querySnapshot.docs.map((doc) => ({
         id: doc.id,
