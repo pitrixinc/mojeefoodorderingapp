@@ -22,7 +22,6 @@ export default function VendorHome() {
   // Get user data from Firebase Auth
   const user = auth.currentUser;
 
-
   useEffect(() => {
     // Check if user exists and is verified
     const checkUser = async () => {
@@ -52,7 +51,7 @@ export default function VendorHome() {
     else if (hours < 18) setGreeting('Good Afternoon');
     else setGreeting('Good Evening');
   }, []);
-
+/*
   const fetchVendorData = async (vendorId) => {
     try {
       const ordersQuery = query(collection(db, 'orders'), where('vendorId', '==', vendorId), where('status', '==', 'delivered'));
@@ -77,6 +76,87 @@ export default function VendorHome() {
       console.error("Error fetching vendor data: ", error);
     }
   };
+*/
+
+/*
+useEffect(() => {
+  const fetchVendorData = async () => {
+    try {
+      // Ensure user is authenticated
+      const user = auth.currentUser;
+      if (user) {
+        const vendorId = user.uid; // Ensure the correct vendor UID is being passed
+
+        // Fetch delivered orders and calculate total sales
+        const ordersQuery = query(
+          collection(db, 'orders'),
+          where('vendorId', '==', vendorId)
+        );
+        const querySnapshot = await getDocs(ordersQuery);
+
+        let sales = 0;
+        const ordersArray = [];
+        
+        querySnapshot.forEach(doc => {
+          const orderData = doc.data();
+          ordersArray.push({ id: doc.id, ...orderData });
+          
+          if (orderData.status === 'delivered') {
+            sales += orderData.price; // Only sum delivered orders
+          }
+        });
+
+        setTotalSales(sales); // Set total sales
+        setTotalOrders(ordersArray.length); // Total number of orders
+        setOrders(ordersArray); // Set orders to state
+        setFilteredOrders(ordersArray); // Initially show all orders
+      }
+    } catch (error) {
+      console.error('Error fetching vendor data: ', error);
+    }
+  };
+
+  // Fetch vendor data whenever the component mounts
+  fetchVendorData();
+}, []);
+*/
+
+// Move fetchVendorData outside of useEffect so it can be reused
+const fetchVendorData = async () => {
+  try {
+    const user = auth.currentUser;
+    if (user) {
+      const vendorId = user.uid;
+
+      const ordersQuery = query(collection(db, 'orders'), where('vendorId', '==', vendorId));
+      const querySnapshot = await getDocs(ordersQuery);
+
+      let sales = 0;
+      const ordersArray = [];
+
+      querySnapshot.forEach(doc => {
+        const orderData = doc.data();
+        ordersArray.push({ id: doc.id, ...orderData });
+
+        if (orderData.status === 'delivered') {
+        //  sales += orderData.price;
+          sales = orderData.price;
+        }
+      });
+
+      setTotalSales(sales);
+      setTotalOrders(ordersArray.length);
+      setOrders(ordersArray);
+      setFilteredOrders(ordersArray);
+    }
+  } catch (error) {
+    console.error('Error fetching vendor data: ', error);
+  }
+};
+
+useEffect(() => {
+  fetchVendorData();
+}, []);
 
   const filterOrders = (status) => {
     if (status === 'all') {
@@ -99,6 +179,7 @@ export default function VendorHome() {
   };
 
   const handleStatusChange = async (orderId, newStatus) => {
+    
     try {
       const orderRef = doc(db, 'orders', orderId);
       await updateDoc(orderRef, { status: newStatus });
@@ -110,13 +191,15 @@ export default function VendorHome() {
     }
   };
 
+
+
   const renderOrderCard = (order) => {
     return (
       <View key={order.id} style={styles.orderCard}>
         <Image source={{ uri: order.image }} style={styles.orderImage} />
         <View style={styles.orderDetails}>
           <Text style={styles.orderName}>{order.name}</Text>
-          <Text style={styles.orderPrice}>${order.price}</Text>
+          <Text style={styles.orderPrice}>GHS{order.price}</Text>
           <Text style={styles.buyerName}>Buyer: {order.buyerName}</Text>
           <View style={styles.statusContainer}>
             <RNPickerSelect
@@ -137,6 +220,10 @@ export default function VendorHome() {
       </View>
     );
   };
+
+
+ 
+
 
   return (
     <ScrollView style={styles.container}>
